@@ -207,7 +207,7 @@ async function gasRequest(payload) {
   const res = await fetch(url.toString(), {
     method: "POST",
     headers: { "Content-Type": "text/plain;charset=utf-8" },
-    body: JSON.stringify(payload),
+    body: JSON.stringify({ ...payload, origin: window.location.origin }),
   });
   if (!res.ok) throw new Error("GAS 請求失敗：" + res.status);
   const data = await res.json();
