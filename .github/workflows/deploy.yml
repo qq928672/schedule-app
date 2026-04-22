@@ -7,6 +7,9 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
     steps:
       - uses: actions/checkout@v4
 
@@ -21,6 +24,8 @@ jobs:
           npm run build
         env:
           VITE_GAS_URL: ${{ secrets.VITE_GAS_URL }}
+          VITE_GOOGLE_CLIENT_ID: ${{ secrets.VITE_GOOGLE_CLIENT_ID }}
+          VITE_ALLOWED_EMAIL: ${{ secrets.VITE_ALLOWED_EMAIL }}
 
       - name: Deploy
         uses: peaceiris/actions-gh-pages@v3
