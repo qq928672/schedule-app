@@ -309,8 +309,6 @@ export default function App() {
                 ).join("")
               )
             );
-            console.log("登入 email:", payload.email);
-            console.log("允許 email:", ALLOWED_EMAIL);
             if (payload.email !== ALLOWED_EMAIL) {
               setAuthError("此帳號（" + payload.email + "）沒有存取權限");
               return;
@@ -1365,6 +1363,7 @@ function LoadingStage() {
 // ─────────────────────────────────────────────────────────────
 function PreviewStage({ initial, onBack, onCancel, onConfirm, onDelete, mode = "create" }) {
   const [draft, setDraft] = useState(initial);
+  const [saving, setSaving] = useState(false);
 
   const update = (key, value) => setDraft({ ...draft, [key]: value });
 
@@ -1675,11 +1674,14 @@ function PreviewStage({ initial, onBack, onCancel, onConfirm, onDelete, mode = "
           </button>
           <button
             className="btn-journal btn-pink"
-            onClick={() => onConfirm(draft)}
-            disabled={!canConfirm}
+            onClick={async () => {
+              setSaving(true);
+              await onConfirm(draft);
+              setSaving(false);
+            }}
+            disabled={!canConfirm || saving}
           >
-            {isEdit ? "儲存變更 ✨" : "加入行程本 ✨"}
-          </button>
+            {saving ? "處理中..." : isEdit ? "儲存變更 ✨" : "加入行程本 ✨"}          </button>
         </div>
       </div>
     </div>
