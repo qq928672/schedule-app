@@ -299,13 +299,16 @@ export default function App() {
       window.google.accounts.id.initialize({
         client_id: GOOGLE_CLIENT_ID,
         callback: (response) => {
-          console.log("Google callback 觸發", response);
-          const payload = JSON.parse(atob(response.credential.split(".")[1]));
-          console.log("登入 email:", payload.email);
-          console.log("允許 email:", ALLOWED_EMAIL);
           try {
-            // 解析 JWT token 取得使用者資訊
-            const payload = JSON.parse(atob(response.credential.split(".")[1]));
+            const base64 = response.credential.split(".")[1]
+              .replace(/-/g, "+").replace(/_/g, "/");
+            const payload = JSON.parse(
+              decodeURIComponent(
+                atob(base64).split("").map(c =>
+                  "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2)
+                ).join("")
+              )
+            );
             console.log("登入 email:", payload.email);
             console.log("允許 email:", ALLOWED_EMAIL);
             if (payload.email !== ALLOWED_EMAIL) {
@@ -317,6 +320,7 @@ export default function App() {
             setUser(userInfo);
             setAuthError(null);
           } catch (e) {
+            console.error("登入錯誤", e);
             setAuthError("登入失敗，請再試一次");
           }
         },
