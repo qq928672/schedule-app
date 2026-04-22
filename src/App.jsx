@@ -972,7 +972,7 @@ function Header({ view, setView, onPaste, eventCount, user, onSignOut, search, s
             color: "var(--ink)",
           }}
         >
-          <span className="wavy-underline">今天的</span>行程記事本
+          <span className="wavy-underline">時光</span>記事
           <span
             style={{
               display: "inline-block",
