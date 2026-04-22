@@ -299,7 +299,10 @@ export default function App() {
       window.google.accounts.id.initialize({
         client_id: GOOGLE_CLIENT_ID,
         callback: (response) => {
-            console.log("Google callback 觸發", response);
+          console.log("Google callback 觸發", response);
+          const payload = JSON.parse(atob(response.credential.split(".")[1]));
+          console.log("登入 email:", payload.email);
+          console.log("允許 email:", ALLOWED_EMAIL);
           try {
             // 解析 JWT token 取得使用者資訊
             const payload = JSON.parse(atob(response.credential.split(".")[1]));
