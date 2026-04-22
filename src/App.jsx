@@ -21,7 +21,7 @@ if (typeof window !== "undefined") {
 // ALLOWED_EMAIL：只有這個 email 可以登入
 // ─────────────────────────────────────────────────────────────
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || "你的Client-ID.apps.googleusercontent.com";
-const ALLOWED_EMAIL = import.meta.env.VITE_ALLOWED_EMAIL || "你的email@gmail.com";
+const ALLOWED_EMAIL    = import.meta.env.VITE_ALLOWED_EMAIL    || "你的email@gmail.com";
 
 // ─────────────────────────────────────────────────────────────
 // MOCK DATA
@@ -207,7 +207,7 @@ async function gasRequest(payload) {
   const res = await fetch(url.toString(), {
     method: "POST",
     headers: { "Content-Type": "text/plain;charset=utf-8" },
-    body: JSON.stringify({ ...payload, origin: window.location.origin }),
+    body: JSON.stringify(payload),
   });
   if (!res.ok) throw new Error("GAS 請求失敗：" + res.status);
   const data = await res.json();
@@ -224,7 +224,7 @@ async function sheetsGetAll() {
       ...ev,
       id: ev.id || String(Date.now()),
       // date 空白時補今天，避免後續 parseYMD 炸掉
-      date: (ev.date || "").toString().trim().slice(0, 10) || new Date().toISOString().slice(0, 10),
+      date: ev.date || new Date().toISOString().slice(0, 10),
     }));
 }
 
@@ -274,6 +274,8 @@ export default function App() {
   const [view, setView] = useState("schedule");
   const [pasteOpen, setPasteOpen] = useState(false);
   const [editingEvent, setEditingEvent] = useState(null);
+  const [search, setSearch] = useState("");
+  const [filterType, setFilterType] = useState("all"); // all | lecture | meeting | dinner
   const [deletingEvent, setDeletingEvent] = useState(null);
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -300,15 +302,8 @@ export default function App() {
         client_id: GOOGLE_CLIENT_ID,
         callback: (response) => {
           try {
-            const base64 = response.credential.split(".")[1]
-              .replace(/-/g, "+").replace(/_/g, "/");
-            const payload = JSON.parse(
-              decodeURIComponent(
-                atob(base64).split("").map(c =>
-                  "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2)
-                ).join("")
-              )
-            );
+            // 解析 JWT token 取得使用者資訊
+            const payload = JSON.parse(atob(response.credential.split(".")[1]));
             if (payload.email !== ALLOWED_EMAIL) {
               setAuthError("此帳號（" + payload.email + "）沒有存取權限");
               return;
@@ -318,7 +313,6 @@ export default function App() {
             setUser(userInfo);
             setAuthError(null);
           } catch (e) {
-            console.error("登入錯誤", e);
             setAuthError("登入失敗，請再試一次");
           }
         },
@@ -349,6 +343,14 @@ export default function App() {
       })
       .finally(() => setLoading(false));
   }, [user]);
+
+  // ── 過濾後的行程 ─────────────────────────────────────────
+  const filteredEvents = events.filter(ev => {
+    const matchSearch = search.trim() === "" ||
+      ev.title.toLowerCase().includes(search.trim().toLowerCase());
+    const matchType = filterType === "all" || ev.type === filterType;
+    return matchSearch && matchType;
+  });
 
   // ── 未登入：顯示登入頁 ─────────────────────────────────────
   if (!user) {
@@ -537,6 +539,14 @@ export default function App() {
         }
 
         html, body { overflow-x: hidden; }
+
+        /* 手機版優化 */
+        @media (max-width: 600px) {
+          .cal-weekday { font-size: 10px !important; padding: 4px 2px !important; }
+          .cal-cell-num { font-size: 13px !important; }
+          .cal-event-chip { font-size: 9px !important; padding: 2px 3px !important; }
+          .punch-holes { display: none; }
+        }
       `}</style>
 
       <div className="paper-bg" />
@@ -562,7 +572,7 @@ export default function App() {
             正在讀取行程本...
           </div>
           <div style={{ display: "flex", gap: 8 }}>
-            {[0, 1, 2].map(i => (
+            {[0,1,2].map(i => (
               <span key={i} style={{
                 width: 10, height: 10, borderRadius: "50%",
                 background: "var(--accent)",
@@ -601,21 +611,25 @@ export default function App() {
           view={view}
           setView={setView}
           onPaste={() => setPasteOpen(true)}
-          eventCount={events.length}
+          eventCount={filteredEvents.length}
           user={user}
           onSignOut={handleSignOut}
+          search={search}
+          setSearch={setSearch}
+          filterType={filterType}
+          setFilterType={setFilterType}
         />
 
         <main style={{ maxWidth: 1100, margin: "0 auto", padding: "0 48px 120px 80px" }}>
           {view === "schedule" ? (
             <ScheduleView
-              events={events}
+              events={filteredEvents}
               onEdit={setEditingEvent}
               onDelete={setDeletingEvent}
             />
           ) : (
             <CalendarView
-              events={events}
+              events={filteredEvents}
               onEdit={setEditingEvent}
               onDelete={setDeletingEvent}
             />
@@ -863,7 +877,7 @@ function DecorationDoodles() {
 }
 
 // ─────────────────────────────────────────────────────────────
-function Header({ view, setView, onPaste, eventCount, user, onSignOut }) {
+function Header({ view, setView, onPaste, eventCount, user, onSignOut, search, setSearch, filterType, setFilterType }) {
   const today = new Date();
   const dateLine = `${today.getFullYear()}年 ${today.getMonth() + 1}月 ${today.getDate()}日`;
   const weekday = WEEKDAY_SHORT[today.getDay()];
@@ -1015,6 +1029,119 @@ function Header({ view, setView, onPaste, eventCount, user, onSignOut }) {
           label="月曆"
           sub="月曆"
         />
+      </div>
+
+      {/* 搜尋 + 篩選列 */}
+      <div
+        className="fade"
+        style={{
+          animationDelay: "0.32s",
+          display: "flex",
+          gap: 10,
+          flexWrap: "wrap",
+          alignItems: "center",
+          marginTop: 16,
+        }}
+      >
+        {/* 搜尋框 */}
+        <div style={{ position: "relative", flex: "1 1 200px", minWidth: 160, maxWidth: 360 }}>
+          <span style={{
+            position: "absolute", left: 12, top: "50%",
+            transform: "translateY(-50%)", fontSize: 14, opacity: 0.5,
+          }}>🔍</span>
+          <input
+            type="text"
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            placeholder="搜尋行程標題..."
+            style={{
+              width: "100%",
+              padding: "10px 14px 10px 34px",
+              border: "1.5px solid var(--line)",
+              borderRadius: 999,
+              background: "var(--cream)",
+              fontFamily: "var(--body-font)",
+              fontSize: 14,
+              color: "var(--ink)",
+              outline: "none",
+              boxShadow: "2px 2px 0 var(--line)",
+              transition: "border-color 0.2s ease",
+            }}
+            onFocus={e => e.target.style.borderColor = "var(--accent)"}
+            onBlur={e => e.target.style.borderColor = "var(--line)"}
+          />
+          {search && (
+            <button
+              onClick={() => setSearch("")}
+              style={{
+                position: "absolute", right: 10, top: "50%",
+                transform: "translateY(-50%)",
+                border: "none", background: "transparent",
+                cursor: "pointer", fontSize: 13, color: "var(--ink-mute)",
+                padding: "2px 4px",
+              }}
+            >✕</button>
+          )}
+        </div>
+
+        {/* 類型篩選 */}
+        <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+          {[
+            { key: "all",     label: "全部",  bg: "var(--cream)",  border: "var(--ink)" },
+            { key: "lecture", label: "📖 講座", bg: "#FFF3E4", border: "#E8B896" },
+            { key: "meeting", label: "☕ 會議", bg: "#EDF4FA", border: "#9EC0D8" },
+            { key: "dinner",  label: "🍡 聚餐", bg: "#FEEDF1", border: "#E8A8B8" },
+          ].map(({ key, label, bg, border }) => (
+            <button
+              key={key}
+              onClick={() => setFilterType(key)}
+              style={{
+                padding: "8px 14px",
+                borderRadius: 999,
+                border: `1.5px solid ${filterType === key ? border : "var(--line)"}`,
+                background: filterType === key ? bg : "transparent",
+                fontFamily: "var(--body-font)",
+                fontSize: 13,
+                fontWeight: filterType === key ? 600 : 400,
+                color: "var(--ink)",
+                cursor: "pointer",
+                transition: "all 0.2s ease",
+                boxShadow: filterType === key ? `2px 2px 0 ${border}` : "none",
+                transform: filterType === key ? "translate(-1px,-1px)" : "translate(0,0)",
+              }}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+
+        {/* 篩選結果提示 */}
+        {(search || filterType !== "all") && (
+          <span
+            style={{
+              fontFamily: "var(--hand-font)",
+              fontSize: 13,
+              color: "var(--ink-soft)",
+            }}
+          >
+            找到 {eventCount} 件
+            {search && <span>・含「{search}」</span>}
+            {filterType !== "all" && (
+              <button
+                onClick={() => { setSearch(""); setFilterType("all"); }}
+                style={{
+                  marginLeft: 8,
+                  border: "none", background: "transparent",
+                  cursor: "pointer", fontSize: 12,
+                  color: "var(--accent)", fontFamily: "var(--hand-font)",
+                  textDecoration: "underline",
+                }}
+              >
+                清除篩選
+              </button>
+            )}
+          </span>
+        )}
       </div>
     </header>
   );
@@ -1363,7 +1490,6 @@ function LoadingStage() {
 // ─────────────────────────────────────────────────────────────
 function PreviewStage({ initial, onBack, onCancel, onConfirm, onDelete, mode = "create" }) {
   const [draft, setDraft] = useState(initial);
-  const [saving, setSaving] = useState(false);
 
   const update = (key, value) => setDraft({ ...draft, [key]: value });
 
@@ -1674,14 +1800,11 @@ function PreviewStage({ initial, onBack, onCancel, onConfirm, onDelete, mode = "
           </button>
           <button
             className="btn-journal btn-pink"
-            onClick={async () => {
-              setSaving(true);
-              await onConfirm(draft);
-              setSaving(false);
-            }}
-            disabled={!canConfirm || saving}
+            onClick={() => onConfirm(draft)}
+            disabled={!canConfirm}
           >
-            {saving ? "處理中..." : isEdit ? "儲存變更 ✨" : "加入行程本 ✨"}          </button>
+            {isEdit ? "儲存變更 ✨" : "加入行程本 ✨"}
+          </button>
         </div>
       </div>
     </div>
@@ -1721,8 +1844,8 @@ function StepIndicator({ current }) {
                 background: active
                   ? "var(--pink)"
                   : done
-                    ? "var(--mint)"
-                    : "transparent",
+                  ? "var(--mint)"
+                  : "transparent",
                 border: active ? "1.5px solid var(--ink)" : "1.5px solid transparent",
                 opacity: active || done ? 1 : 0.4,
                 transition: "all 0.3s ease",
@@ -1736,8 +1859,8 @@ function StepIndicator({ current }) {
                   background: active
                     ? "var(--ink)"
                     : done
-                      ? "var(--ink)"
-                      : "var(--line)",
+                    ? "var(--ink)"
+                    : "var(--line)",
                   color: "var(--cream)",
                   fontSize: 11,
                   fontWeight: 700,
@@ -1829,13 +1952,13 @@ function EditableField({
     background: showWarning
       ? "var(--yellow-soft)"
       : focused
-        ? "var(--cream)"
-        : "rgba(255, 255, 255, 0.5)",
+      ? "var(--cream)"
+      : "rgba(255, 255, 255, 0.5)",
     border: showWarning
       ? "1px dashed #D4B44E"
       : focused
-        ? "1.5px solid var(--accent)"
-        : "1px solid var(--line)",
+      ? "1.5px solid var(--accent)"
+      : "1px solid var(--line)",
     borderRadius: 10,
     fontFamily: fontFamily || "var(--body-font)",
     fontSize: fontSize,
@@ -1910,15 +2033,53 @@ function ScheduleView({ events, onEdit, onDelete }) {
 
   return (
     <section style={{ paddingTop: 32 }}>
-      {grouped.map((group, gi) => (
-        <MonthGroup
-          key={`${group.year}-${group.month}`}
-          group={group}
-          index={gi}
-          onEdit={onEdit}
-          onDelete={onDelete}
-        />
-      ))}
+      {grouped.length === 0 ? (
+        <div
+          className="fade"
+          style={{
+            textAlign: "center",
+            padding: "80px 24px",
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            gap: 16,
+          }}
+        >
+          <div style={{ fontSize: 64 }}>📋</div>
+          <div
+            style={{
+              fontFamily: "var(--title-font)",
+              fontSize: 24,
+              color: "var(--ink)",
+              fontWeight: 600,
+            }}
+          >
+            還沒有行程喔
+          </div>
+          <div
+            style={{
+              fontFamily: "var(--hand-font)",
+              fontSize: 16,
+              color: "var(--ink-soft)",
+              lineHeight: 1.6,
+              maxWidth: 320,
+            }}
+          >
+            點右上角的「＋ AI 新增行程」<br />
+            貼上活動文字，讓 AI 幫你整理 ✨
+          </div>
+        </div>
+      ) : (
+        grouped.map((group, gi) => (
+          <MonthGroup
+            key={`${group.year}-${group.month}`}
+            group={group}
+            index={gi}
+            onEdit={onEdit}
+            onDelete={onDelete}
+          />
+        ))
+      )}
     </section>
   );
 }
@@ -2242,24 +2403,54 @@ function EventSticker({ event, index, onEdit, onDelete }) {
       </div>
 
       {event.note && (
-        <div
-          style={{
-            marginTop: 8,
-            paddingTop: 12,
-            borderTop: `1px dashed ${meta.border}`,
-            fontFamily: "var(--hand-font)",
-            fontSize: 15,
-            color: meta.ink,
-            display: "flex",
-            alignItems: "flex-start",
-            gap: 8,
-          }}
-        >
-          <span style={{ opacity: 0.6 }}><NI icon="noto:pencil" size={14} /></span>
-          <span style={{ whiteSpace: "pre-wrap" }}>{event.note}</span>
-        </div>
+        <NoteSection note={event.note} border={meta.border} ink={meta.ink} />
       )}
     </article>
+  );
+}
+
+function NoteSection({ note, border, ink }) {
+  const [expanded, setExpanded] = useState(false);
+  const MAX_LEN = 60;
+  const isLong = note.length > MAX_LEN;
+  return (
+    <div
+      style={{
+        marginTop: 8,
+        paddingTop: 12,
+        borderTop: `1px dashed ${border}`,
+        fontFamily: "var(--hand-font)",
+        fontSize: 15,
+        color: ink,
+      }}
+    >
+      <div style={{ display: "flex", alignItems: "flex-start", gap: 8 }}>
+        <span style={{ opacity: 0.6, flexShrink: 0 }}><NI icon="noto:pencil" size={14} /></span>
+        <span style={{ whiteSpace: "pre-wrap" }}>
+          {isLong && !expanded ? note.slice(0, MAX_LEN) + "..." : note}
+        </span>
+      </div>
+      {isLong && (
+        <button
+          onClick={(e) => { e.stopPropagation(); setExpanded(!expanded); }}
+          style={{
+            marginTop: 6,
+            marginLeft: 22,
+            border: "none",
+            background: "transparent",
+            cursor: "pointer",
+            fontSize: 12,
+            color: ink,
+            opacity: 0.7,
+            fontFamily: "var(--hand-font)",
+            padding: 0,
+            textDecoration: "underline",
+          }}
+        >
+          {expanded ? "收合 ↑" : "展開全文 ↓"}
+        </button>
+      )}
+    </div>
   );
 }
 
@@ -2728,7 +2919,7 @@ function CalendarCell({ date, events, isToday, dayOfWeek, onEventClick, onShowMo
     return (
       <div
         style={{
-          minHeight: 120,
+          minHeight: "clamp(60px, 10vw, 120px)",
           borderRadius: 12,
           background:
             "repeating-linear-gradient(45deg, transparent 0 6px, var(--paper-2) 6px 7px)",
@@ -2745,9 +2936,9 @@ function CalendarCell({ date, events, isToday, dayOfWeek, onEventClick, onShowMo
   return (
     <div
       style={{
-        minHeight: 120,
+        minHeight: "clamp(60px, 10vw, 120px)",
         borderRadius: 14,
-        padding: "8px 8px 6px",
+        padding: "clamp(4px, 1vw, 8px)",
         background: isToday ? "var(--yellow)" : "var(--paper)",
         border: isToday ? "2px dashed var(--accent)" : "1px solid var(--line)",
         position: "relative",
@@ -2780,10 +2971,10 @@ function CalendarCell({ date, events, isToday, dayOfWeek, onEventClick, onShowMo
             color: isToday
               ? "var(--accent)"
               : isSun
-                ? "var(--accent)"
-                : isSat
-                  ? "#5D8DB5"
-                  : "var(--ink)",
+              ? "var(--accent)"
+              : isSat
+              ? "#5D8DB5"
+              : "var(--ink)",
             lineHeight: 1,
           }}
         >
@@ -3130,7 +3321,8 @@ function EventDetailModal({ event, onClose, onEdit, onDelete }) {
             }}
           >
             <span style={{ opacity: 0.6, flexShrink: 0 }}><NI icon="noto:pencil" size={14} /></span>
-            <span style={{ whiteSpace: "pre-wrap" }}>{event.note}</span>          </div>
+            <span>{event.note}</span>
+          </div>
         )}
 
         {/* 編輯 / 刪除 按鈕列 */}
