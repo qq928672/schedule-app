@@ -224,7 +224,7 @@ async function sheetsGetAll() {
       ...ev,
       id: ev.id || String(Date.now()),
       // date 空白時補今天，避免後續 parseYMD 炸掉
-      date: ev.date || new Date().toISOString().slice(0, 10),
+      date: (ev.date || "").toString().trim().slice(0, 10) || new Date().toISOString().slice(0, 10),
     }));
 }
 
