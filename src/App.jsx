@@ -806,7 +806,7 @@ function LoginPage({ authError }) {
             lineHeight: 1.2,
           }}
         >
-          今天的行程記事本
+          時光記事
         </h1>
 
         <p
