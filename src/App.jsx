@@ -21,7 +21,7 @@ if (typeof window !== "undefined") {
 // ALLOWED_EMAIL：只有這個 email 可以登入
 // ─────────────────────────────────────────────────────────────
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || "你的Client-ID.apps.googleusercontent.com";
-const ALLOWED_EMAIL    = import.meta.env.VITE_ALLOWED_EMAIL    || "你的email@gmail.com";
+const ALLOWED_EMAIL = import.meta.env.VITE_ALLOWED_EMAIL || "你的email@gmail.com";
 
 // ─────────────────────────────────────────────────────────────
 // MOCK DATA
@@ -302,6 +302,8 @@ export default function App() {
           try {
             // 解析 JWT token 取得使用者資訊
             const payload = JSON.parse(atob(response.credential.split(".")[1]));
+            console.log("登入 email:", payload.email);
+            console.log("允許 email:", ALLOWED_EMAIL);
             if (payload.email !== ALLOWED_EMAIL) {
               setAuthError("此帳號（" + payload.email + "）沒有存取權限");
               return;
@@ -554,7 +556,7 @@ export default function App() {
             正在讀取行程本...
           </div>
           <div style={{ display: "flex", gap: 8 }}>
-            {[0,1,2].map(i => (
+            {[0, 1, 2].map(i => (
               <span key={i} style={{
                 width: 10, height: 10, borderRadius: "50%",
                 background: "var(--accent)",
@@ -1709,8 +1711,8 @@ function StepIndicator({ current }) {
                 background: active
                   ? "var(--pink)"
                   : done
-                  ? "var(--mint)"
-                  : "transparent",
+                    ? "var(--mint)"
+                    : "transparent",
                 border: active ? "1.5px solid var(--ink)" : "1.5px solid transparent",
                 opacity: active || done ? 1 : 0.4,
                 transition: "all 0.3s ease",
@@ -1724,8 +1726,8 @@ function StepIndicator({ current }) {
                   background: active
                     ? "var(--ink)"
                     : done
-                    ? "var(--ink)"
-                    : "var(--line)",
+                      ? "var(--ink)"
+                      : "var(--line)",
                   color: "var(--cream)",
                   fontSize: 11,
                   fontWeight: 700,
@@ -1817,13 +1819,13 @@ function EditableField({
     background: showWarning
       ? "var(--yellow-soft)"
       : focused
-      ? "var(--cream)"
-      : "rgba(255, 255, 255, 0.5)",
+        ? "var(--cream)"
+        : "rgba(255, 255, 255, 0.5)",
     border: showWarning
       ? "1px dashed #D4B44E"
       : focused
-      ? "1.5px solid var(--accent)"
-      : "1px solid var(--line)",
+        ? "1.5px solid var(--accent)"
+        : "1px solid var(--line)",
     borderRadius: 10,
     fontFamily: fontFamily || "var(--body-font)",
     fontSize: fontSize,
@@ -2768,10 +2770,10 @@ function CalendarCell({ date, events, isToday, dayOfWeek, onEventClick, onShowMo
             color: isToday
               ? "var(--accent)"
               : isSun
-              ? "var(--accent)"
-              : isSat
-              ? "#5D8DB5"
-              : "var(--ink)",
+                ? "var(--accent)"
+                : isSat
+                  ? "#5D8DB5"
+                  : "var(--ink)",
             lineHeight: 1,
           }}
         >
