@@ -2256,7 +2256,7 @@ function EventSticker({ event, index, onEdit, onDelete }) {
           }}
         >
           <span style={{ opacity: 0.6 }}><NI icon="noto:pencil" size={14} /></span>
-          <span>{event.note}</span>
+          <span style={{ whiteSpace: "pre-wrap" }}>{event.note}</span>
         </div>
       )}
     </article>
@@ -3130,8 +3130,7 @@ function EventDetailModal({ event, onClose, onEdit, onDelete }) {
             }}
           >
             <span style={{ opacity: 0.6, flexShrink: 0 }}><NI icon="noto:pencil" size={14} /></span>
-            <span>{event.note}</span>
-          </div>
+            <span style={{ whiteSpace: "pre-wrap" }}>{event.note}</span>          </div>
         )}
 
         {/* 編輯 / 刪除 按鈕列 */}
