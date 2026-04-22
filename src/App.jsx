@@ -7,6 +7,22 @@ if (typeof window !== "undefined" && !customElements.get("iconify-icon")) {
   document.head.appendChild(s);
 }
 
+// Google Identity Services
+if (typeof window !== "undefined") {
+  const s = document.createElement("script");
+  s.src = "https://accounts.google.com/gsi/client";
+  s.async = true;
+  document.head.appendChild(s);
+}
+
+// ─────────────────────────────────────────────────────────────
+// AUTH 設定
+// 取得 Client ID：console.cloud.google.com → 憑證 → OAuth 用戶端 ID
+// ALLOWED_EMAIL：只有這個 email 可以登入
+// ─────────────────────────────────────────────────────────────
+const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || "你的Client-ID.apps.googleusercontent.com";
+const ALLOWED_EMAIL    = import.meta.env.VITE_ALLOWED_EMAIL    || "你的email@gmail.com";
+
 // ─────────────────────────────────────────────────────────────
 // MOCK DATA
 // ─────────────────────────────────────────────────────────────
@@ -260,21 +276,76 @@ export default function App() {
   const [editingEvent, setEditingEvent] = useState(null);
   const [deletingEvent, setDeletingEvent] = useState(null);
   const [events, setEvents] = useState([]);
-  const [loading, setLoading] = useState(true);   // 初始載入
-  const [syncError, setSyncError] = useState(null); // 同步錯誤提示
+  const [loading, setLoading] = useState(true);
+  const [syncError, setSyncError] = useState(null);
   const [toast, setToast] = useState(null);
 
-  // ── 初始載入：從 Sheets 讀取所有行程 ──────────────────────────
+  // ── Google 登入狀態 ────────────────────────────────────────
+  const [user, setUser] = useState(() => {
+    // 記住登入狀態，重整不需要重新登入
+    try {
+      const saved = sessionStorage.getItem("schedule_user");
+      return saved ? JSON.parse(saved) : null;
+    } catch { return null; }
+  });
+  const [authError, setAuthError] = useState(null);
+
+  // ── 初始化 Google One Tap ──────────────────────────────────
   useEffect(() => {
+    if (user) return; // 已登入就不需要初始化
+    const timer = setInterval(() => {
+      if (!window.google) return;
+      clearInterval(timer);
+      window.google.accounts.id.initialize({
+        client_id: GOOGLE_CLIENT_ID,
+        callback: (response) => {
+          try {
+            // 解析 JWT token 取得使用者資訊
+            const payload = JSON.parse(atob(response.credential.split(".")[1]));
+            if (payload.email !== ALLOWED_EMAIL) {
+              setAuthError("此帳號（" + payload.email + "）沒有存取權限");
+              return;
+            }
+            const userInfo = { name: payload.name, email: payload.email, picture: payload.picture };
+            sessionStorage.setItem("schedule_user", JSON.stringify(userInfo));
+            setUser(userInfo);
+            setAuthError(null);
+          } catch (e) {
+            setAuthError("登入失敗，請再試一次");
+          }
+        },
+      });
+      window.google.accounts.id.renderButton(
+        document.getElementById("google-signin-btn"),
+        { theme: "outline", size: "large", text: "signin_with", shape: "pill", locale: "zh-TW" }
+      );
+    }, 200);
+    return () => clearInterval(timer);
+  }, [user]);
+
+  const handleSignOut = () => {
+    sessionStorage.removeItem("schedule_user");
+    setUser(null);
+    if (window.google) window.google.accounts.id.disableAutoSelect();
+  };
+
+  // ── 初始載入：從 Sheets 讀取所有行程（登入後才載入）──────────
+  useEffect(() => {
+    if (!user) return;
     sheetsGetAll()
       .then(data => setEvents(data))
       .catch(err => {
         console.error("載入失敗，使用示範資料", err);
         setSyncError("無法連線到試算表，目前顯示示範資料");
-        setEvents(MOCK_EVENTS); // 連線失敗時 fallback 到 mock data
+        setEvents(MOCK_EVENTS);
       })
       .finally(() => setLoading(false));
-  }, []);
+  }, [user]);
+
+  // ── 未登入：顯示登入頁 ─────────────────────────────────────
+  if (!user) {
+    return <LoginPage authError={authError} />;
+  }
 
   const showToast = (msg) => {
     setToast(msg);
@@ -523,6 +594,8 @@ export default function App() {
           setView={setView}
           onPaste={() => setPasteOpen(true)}
           eventCount={events.length}
+          user={user}
+          onSignOut={handleSignOut}
         />
 
         <main style={{ maxWidth: 1100, margin: "0 auto", padding: "0 48px 120px 80px" }}>
@@ -597,6 +670,143 @@ export default function App() {
 }
 
 // ─────────────────────────────────────────────────────────────
+// LOGIN PAGE — 手帳風 Google 登入頁
+// ─────────────────────────────────────────────────────────────
+function LoginPage({ authError }) {
+  return (
+    <div
+      style={{
+        minHeight: "100vh",
+        background: "var(--paper)",
+        fontFamily: "var(--body-font)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        padding: 24,
+        position: "relative",
+        overflow: "hidden",
+      }}
+    >
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Klee+One:wght@400;600&family=Shippori+Mincho:wght@400;500;600&family=Kosugi+Maru&display=swap');
+        :root {
+          --paper: #FBF6EC; --paper-2: #F5EEDF; --cream: #FEFAF0;
+          --pink: #FCDDE4; --peach: #FFE8D6; --yellow: #FBEFB7;
+          --ink: #4A3F36; --ink-soft: #7C6E61; --ink-mute: #A89C8F;
+          --line: #E2D6C1; --accent: #D98B8B;
+          --body-font: 'Klee One', 'Noto Sans TC', system-ui, sans-serif;
+          --title-font: 'Shippori Mincho', serif;
+          --label-font: 'Kosugi Maru', sans-serif;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        @keyframes softFade {
+          from { opacity: 0; transform: translateY(10px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes gentleFloat {
+          0%, 100% { transform: translateY(0); }
+          50%      { transform: translateY(-6px); }
+        }
+        .login-card { animation: softFade 0.7s ease both; }
+      `}</style>
+
+      {/* 背景裝飾 */}
+      <div style={{ position: "fixed", top: 60, right: 60, fontSize: 40, opacity: 0.35, animation: "gentleFloat 5s ease-in-out infinite" }}>☁️</div>
+      <div style={{ position: "fixed", bottom: 60, left: 60, fontSize: 34, opacity: 0.35, transform: "rotate(-15deg)" }}>🌿</div>
+      <div style={{ position: "fixed", bottom: 120, right: 80, fontSize: 20, opacity: 0.5 }}>✦</div>
+
+      {/* 登入卡片 */}
+      <div
+        className="login-card"
+        style={{
+          background: "var(--cream)",
+          padding: "48px 40px",
+          borderRadius: 28,
+          border: "1.5px solid var(--ink)",
+          boxShadow: "6px 8px 0 var(--accent)",
+          maxWidth: 420,
+          width: "100%",
+          textAlign: "center",
+          position: "relative",
+        }}
+      >
+        {/* masking tape */}
+        <div style={{
+          position: "absolute", top: -13, left: "50%",
+          transform: "translateX(-50%) rotate(-2deg)",
+          width: 110, height: 26,
+          background: "var(--peach)", opacity: 0.9, borderRadius: 2,
+          backgroundImage: "repeating-linear-gradient(90deg, transparent 0 6px, rgba(255,255,255,0.35) 6px 10px)",
+          boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
+        }} />
+
+        <div style={{ fontSize: 52, marginBottom: 16 }}>📋</div>
+
+        <h1
+          style={{
+            fontFamily: "var(--title-font)",
+            fontSize: 32,
+            fontWeight: 600,
+            color: "var(--ink)",
+            marginBottom: 8,
+            lineHeight: 1.2,
+          }}
+        >
+          今天的行程記事本
+        </h1>
+
+        <p
+          style={{
+            fontFamily: "var(--body-font)",
+            fontSize: 15,
+            color: "var(--ink-soft)",
+            marginBottom: 32,
+            lineHeight: 1.6,
+          }}
+        >
+          請用 Google 帳號登入
+        </p>
+
+        {/* Google 登入按鈕 */}
+        <div
+          id="google-signin-btn"
+          style={{ display: "flex", justifyContent: "center", marginBottom: 16 }}
+        />
+
+        {authError && (
+          <div
+            style={{
+              marginTop: 16,
+              padding: "10px 14px",
+              background: "#FDE8E8",
+              border: "1px dashed #E8A8A8",
+              borderRadius: 12,
+              fontSize: 13,
+              color: "#8A3D3D",
+              fontFamily: "var(--body-font)",
+            }}
+          >
+            {authError}
+          </div>
+        )}
+
+        <p
+          style={{
+            marginTop: 20,
+            fontSize: 12,
+            color: "var(--ink-mute)",
+            fontFamily: "var(--label-font)",
+          }}
+        >
+          僅限授權帳號存取
+        </p>
+      </div>
+    </div>
+  );
+}
+
+
+// ─────────────────────────────────────────────────────────────
 function DecorationDoodles() {
   return (
     <>
@@ -645,7 +855,7 @@ function DecorationDoodles() {
 }
 
 // ─────────────────────────────────────────────────────────────
-function Header({ view, setView, onPaste, eventCount }) {
+function Header({ view, setView, onPaste, eventCount, user, onSignOut }) {
   const today = new Date();
   const dateLine = `${today.getFullYear()}年 ${today.getMonth() + 1}月 ${today.getDate()}日`;
   const weekday = WEEKDAY_SHORT[today.getDay()];
@@ -722,9 +932,29 @@ function Header({ view, setView, onPaste, eventCount }) {
           </span>
         </h1>
 
-        <button className="btn-journal btn-pink" onClick={onPaste}>
-          ＋ AI 新增行程
-        </button>
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          {user && (
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              {user.picture && (
+                <img
+                  src={user.picture}
+                  alt={user.name}
+                  style={{ width: 32, height: 32, borderRadius: "50%", border: "1.5px solid var(--ink)" }}
+                />
+              )}
+              <button
+                className="btn-journal"
+                onClick={onSignOut}
+                style={{ fontSize: 12, padding: "6px 14px" }}
+              >
+                登出
+              </button>
+            </div>
+          )}
+          <button className="btn-journal btn-pink" onClick={onPaste}>
+            ＋ AI 新增行程
+          </button>
+        </div>
       </div>
 
       <p
