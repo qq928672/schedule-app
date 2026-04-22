@@ -128,35 +128,45 @@ const MOCK_EVENTS = [
   },
 ];
 
-const TYPE_META = {
+// TYPE_META 預設值（App 啟動時會從試算表動態讀取覆蓋）
+const DEFAULT_TYPE_META = {
   lecture: {
-    zh: "講座",
-    emoji: "📖",
-    bg: "#FFE8D6",
-    bgSoft: "#FFF3E4",
-    border: "#E8B896",
-    ink: "#8A4A2B",
-    tape: "#F4B88E",
+    zh: "講座", emoji: "📖",
+    bg: "#FFE8D6", bgSoft: "#FFF3E4", border: "#E8B896", ink: "#8A4A2B", tape: "#F4B88E",
   },
   meeting: {
-    zh: "會議",
-    emoji: "☕",
-    bg: "#DDEBF4",
-    bgSoft: "#EDF4FA",
-    border: "#9EC0D8",
-    ink: "#3E5F7D",
-    tape: "#A8C8DF",
+    zh: "會議", emoji: "☕",
+    bg: "#DDEBF4", bgSoft: "#EDF4FA", border: "#9EC0D8", ink: "#3E5F7D", tape: "#A8C8DF",
   },
   dinner: {
-    zh: "聚餐",
-    emoji: "🍡",
-    bg: "#FCDDE4",
-    bgSoft: "#FEEDF1",
-    border: "#E8A8B8",
-    ink: "#8A3D52",
-    tape: "#F2B8C6",
+    zh: "聚餐", emoji: "🍡",
+    bg: "#FCDDE4", bgSoft: "#FEEDF1", border: "#E8A8B8", ink: "#8A3D52", tape: "#F2B8C6",
   },
 };
+
+// 從試算表 row 產生 meta 物件（bg 自動衍生 bgSoft/border/tape）
+function buildTypeMeta(rows) {
+  const meta = { ...DEFAULT_TYPE_META };
+  for (const row of rows) {
+    const key = row.key;
+    if (!key) continue;
+    const bg  = row.bg  || "#F0EBE3";
+    const ink = row.ink || "#4A3F36";
+    meta[key] = {
+      zh:     row.zh    || key,
+      emoji:  row.emoji || "📌",
+      bg,
+      bgSoft: bg + "88",   // 半透明版
+      border: ink + "55",  // 淡邊框
+      ink,
+      tape:   bg,
+    };
+  }
+  return meta;
+}
+
+// 全域 TYPE_META（由 App 啟動後更新）
+let TYPE_META = { ...DEFAULT_TYPE_META };
 
 const MONTH_LABELS = {
   0: { en: "January", jp: "一月" },
@@ -278,6 +288,7 @@ export default function App() {
   const [filterType, setFilterType] = useState("all"); // all | lecture | meeting | dinner
   const [deletingEvent, setDeletingEvent] = useState(null);
   const [events, setEvents] = useState([]);
+  const [typeMeta, setTypeMeta] = useState(DEFAULT_TYPE_META);
   const [loading, setLoading] = useState(true);
   const [syncError, setSyncError] = useState(null);
   const [toast, setToast] = useState(null);
@@ -331,11 +342,21 @@ export default function App() {
     if (window.google) window.google.accounts.id.disableAutoSelect();
   };
 
-  // ── 初始載入：從 Sheets 讀取所有行程（登入後才載入）──────────
+  // ── 初始載入：同時讀取行程 + 類型設定 ────────────────────────
   useEffect(() => {
     if (!user) return;
-    sheetsGetAll()
-      .then(data => setEvents(data))
+    Promise.all([
+      sheetsGetAll(),
+      gasRequest({ action: "getTypes" }).then(d => d.types || []).catch(() => []),
+    ])
+      .then(([evData, typeRows]) => {
+        setEvents(evData);
+        if (typeRows.length > 0) {
+          const newMeta = buildTypeMeta(typeRows);
+          setTypeMeta(newMeta);
+          TYPE_META = newMeta; // 更新全域，讓所有元件都能用
+        }
+      })
       .catch(err => {
         console.error("載入失敗，使用示範資料", err);
         setSyncError("無法連線到試算表，目前顯示示範資料");
@@ -618,6 +639,7 @@ export default function App() {
           setSearch={setSearch}
           filterType={filterType}
           setFilterType={setFilterType}
+          typeMeta={typeMeta}
         />
 
         <main style={{ maxWidth: 1100, margin: "0 auto", padding: "0 48px 120px 80px" }}>
@@ -877,7 +899,7 @@ function DecorationDoodles() {
 }
 
 // ─────────────────────────────────────────────────────────────
-function Header({ view, setView, onPaste, eventCount, user, onSignOut, search, setSearch, filterType, setFilterType }) {
+function Header({ view, setView, onPaste, eventCount, user, onSignOut, search, setSearch, filterType, setFilterType, typeMeta }) {
   const today = new Date();
   const dateLine = `${today.getFullYear()}年 ${today.getMonth() + 1}月 ${today.getDate()}日`;
   const weekday = WEEKDAY_SHORT[today.getDay()];
@@ -1084,13 +1106,16 @@ function Header({ view, setView, onPaste, eventCount, user, onSignOut, search, s
           )}
         </div>
 
-        {/* 類型篩選 */}
+        {/* 類型篩選 — 從試算表動態讀取 */}
         <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
           {[
-            { key: "all",     label: "全部",  bg: "var(--cream)",  border: "var(--ink)" },
-            { key: "lecture", label: "📖 講座", bg: "#FFF3E4", border: "#E8B896" },
-            { key: "meeting", label: "☕ 會議", bg: "#EDF4FA", border: "#9EC0D8" },
-            { key: "dinner",  label: "🍡 聚餐", bg: "#FEEDF1", border: "#E8A8B8" },
+            { key: "all", label: "全部", bg: "var(--cream)", border: "var(--ink)" },
+            ...Object.entries(typeMeta).map(([key, m]) => ({
+              key,
+              label: m.emoji + " " + m.zh,
+              bg: m.bgSoft || m.bg,
+              border: m.border,
+            })),
           ].map(({ key, label, bg, border }) => (
             <button
               key={key}
