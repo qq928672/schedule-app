@@ -1548,6 +1548,7 @@ function LoadingStage() {
 // Stage 3: PREVIEW — 可編輯預覽（同時用於編輯現有事件）
 // ─────────────────────────────────────────────────────────────
 function PreviewStage({ initial, onBack, onCancel, onConfirm, onDelete, mode = "create" }) {
+  const [saving, setSaving] = useState(false);
   const [draft, setDraft] = useState(initial);
 
   const update = (key, value) => setDraft({ ...draft, [key]: value });
@@ -2335,7 +2336,7 @@ function DaySection({ date, items, index, onEdit, onDelete }) {
 }
 
 function EventSticker({ event, index, onEdit, onDelete }) {
-  const meta = TYPE_META[event.type];
+  const meta = TYPE_META[event.type] || TYPE_META["meeting"];
   const tilt = tiltFor(event.id);
   const [hover, setHover] = useState(false);
 
@@ -2615,7 +2616,7 @@ function EditEventModal({ event, onClose, onConfirm, onDelete }) {
 // ─────────────────────────────────────────────────────────────
 function DeleteConfirmModal({ event, onClose, onConfirm }) {
   const [saving, setSaving] = useState(false);
-  const meta = TYPE_META[event.type];
+  const meta = TYPE_META[event.type] || TYPE_META["meeting"];
   return (
     <div
       onClick={onClose}
@@ -3163,7 +3164,7 @@ function CalendarCell({ date, events, isToday, dayOfWeek, onEventClick, onShowMo
 // EventDetailModal — 點日曆事件後開啟的詳細卡片
 // ─────────────────────────────────────────────────────────────
 function EventDetailModal({ event, onClose, onEdit, onDelete }) {
-  const meta = TYPE_META[event.type];
+  const meta = TYPE_META[event.type] || TYPE_META["meeting"];
   const d = event.date ? parseYMD(event.date) : null;
   const weekday = d ? WEEKDAY_SHORT[d.getDay()] : "—";
   const mm = d ? MONTH_LABELS[d.getMonth()] : null;
