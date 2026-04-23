@@ -2614,6 +2614,7 @@ function EditEventModal({ event, onClose, onConfirm, onDelete }) {
 // DeleteConfirmModal — 刪除前確認
 // ─────────────────────────────────────────────────────────────
 function DeleteConfirmModal({ event, onClose, onConfirm }) {
+  const [saving, setSaving] = useState(false);
   const meta = TYPE_META[event.type];
   return (
     <div
