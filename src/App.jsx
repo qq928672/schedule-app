@@ -146,25 +146,39 @@ const DEFAULT_TYPE_META = {
 
 // 從試算表 row 產生 meta 物件（bg 自動衍生 bgSoft/border/tape）
 function buildTypeMeta(rows) {
+  // lecture/meeting/dinner 保留原本顏色
+  // 新類型優先用試算表填的顏色，沒填才用色盤
   const meta = { ...DEFAULT_TYPE_META };
+  let paletteIdx = 0;
   for (const row of rows) {
     const key = row.key;
     if (!key) continue;
-    const bg  = row.bg  || "#F0EBE3";
-    const ink = row.ink || "#4A3F36";
-    meta[key] = {
-      zh:     row.zh    || key,
-      emoji:  row.emoji || "📌",
-      bg,
-      bgSoft: bg + "88",   // 半透明版
-      border: ink + "55",  // 淡邊框
-      ink,
-      tape:   bg,
-    };
+    if (DEFAULT_TYPE_META[key]) {
+      // 預設類型：只更新 zh/emoji，顏色不動
+      meta[key] = {
+        ...DEFAULT_TYPE_META[key],
+        zh:    row.zh    || DEFAULT_TYPE_META[key].zh,
+        emoji: row.emoji || DEFAULT_TYPE_META[key].emoji,
+      };
+    } else {
+      // 新類型：優先用試算表顏色，沒填才用色盤
+      const fallback = COLOR_PALETTE[paletteIdx % COLOR_PALETTE.length];
+      if (!row.bg) paletteIdx++;
+      const bg  = row.bg  || fallback.bg;
+      const ink = row.ink || fallback.ink;
+      meta[key] = {
+        zh:    row.zh    || key,
+        emoji: row.emoji || "📌",
+        bg,
+        bgSoft: fallback.bgSoft || bg,
+        border: fallback.border || bg,
+        ink,
+        tape:   bg,
+      };
+    }
   }
   return meta;
 }
-
 // 全域 TYPE_META（由 App 啟動後更新）
 let TYPE_META = { ...DEFAULT_TYPE_META };
 
