@@ -843,7 +843,7 @@ function LoginPage({ authError }) {
             lineHeight: 1.2,
           }}
         >
-          今天的行程記事本
+          微日記
         </h1>
 
         <p
@@ -1009,7 +1009,7 @@ function Header({ view, setView, onPaste, onManual, eventCount, user, onSignOut,
             color: "var(--ink)",
           }}
         >
-          <span className="wavy-underline">今天的</span>行程記事本
+          <span className="wavy-underline">微日記</span>
           <span
             style={{
               display: "inline-block",
