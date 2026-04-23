@@ -159,7 +159,7 @@ function buildTypeMeta(rows) {
   // lecture/meeting/dinner 保留原本顏色
   // 新類型優先用試算表填的顏色，沒填才用色盤
   const meta = { ...DEFAULT_TYPE_META };
-  let paletteIdx = 0;
+  let paletteIdx = 3;
   for (const row of rows) {
     const key = row.key;
     if (!key) continue;
@@ -1859,10 +1859,14 @@ function PreviewStage({ initial, onBack, onCancel, onConfirm, onDelete, mode = "
           </button>
           <button
             className="btn-journal btn-pink"
-            onClick={() => onConfirm(draft)}
-            disabled={!canConfirm}
+            onClick={async () => {
+              setSaving(true);
+              await onConfirm(draft);
+              setSaving(false);
+            }}
+            disabled={!canConfirm || saving}
           >
-            {isEdit ? "儲存變更 ✨" : "加入行程本 ✨"}
+            {saving ? "處理中..." : isEdit ? "儲存變更 ✨" : "加入行程本 ✨"}
           </button>
         </div>
       </div>
@@ -2745,7 +2749,11 @@ function DeleteConfirmModal({ event, onClose, onConfirm }) {
           </button>
           <button
             className="btn-journal"
-            onClick={onConfirm}
+            onClick={async () => {
+              setSaving(true);
+              await onConfirm();
+            }}
+            disabled={saving}
             style={{
               background: "#FDE8E8",
               borderColor: "#B85A5A",
@@ -2753,7 +2761,7 @@ function DeleteConfirmModal({ event, onClose, onConfirm }) {
               boxShadow: "2px 2px 0 #B85A5A",
             }}
           >
-            確定撕下 <NI icon="noto:cross-mark" size={13} />
+            {saving ? "處理中..." : <span>確定撕下 <NI icon="noto:cross-mark" size={13} /></span>}
           </button>
         </div>
       </div>
