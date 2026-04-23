@@ -426,6 +426,7 @@ export default function App() {
       const newId = await sheetsAdd(newEvent);
       setEvents(prev => [...prev, { ...newEvent, id: newId }]);
       setPasteOpen(false);
+      setManualOpen(false);
       showToast(`✨ 「${newEvent.title}」已加入行程本`);
     } catch (err) {
       showToast(`❌ 新增失敗：${err.message}`);
@@ -1601,6 +1602,7 @@ function LoadingStage() {
 // Stage 3: PREVIEW — 可編輯預覽（同時用於編輯現有事件）
 // ─────────────────────────────────────────────────────────────
 function PreviewStage({ initial, onBack, onCancel, onConfirm, onDelete, mode = "create", isManual = false }) {
+  const [saving, setSaving] = useState(false);
   const [draft, setDraft] = useState(initial);
 
   const update = (key, value) => setDraft({ ...draft, [key]: value });
@@ -1914,10 +1916,17 @@ function PreviewStage({ initial, onBack, onCancel, onConfirm, onDelete, mode = "
           </button>
           <button
             className="btn-journal btn-pink"
-            onClick={() => onConfirm(draft)}
-            disabled={!canConfirm}
+            onClick={async () => {
+              setSaving(true);
+              try {
+                await onConfirm(draft);
+              } finally {
+                setSaving(false);
+              }
+            }}
+            disabled={!canConfirm || saving}
           >
-            {isEdit ? "儲存變更 ✨" : "加入行程本 ✨"}
+            {saving ? "處理中..." : isEdit ? "儲存變更 ✨" : "加入行程本 ✨"}
           </button>
         </div>
       </div>
@@ -2665,7 +2674,8 @@ function EditEventModal({ event, onClose, onConfirm, onDelete }) {
 // DeleteConfirmModal — 刪除前確認
 // ─────────────────────────────────────────────────────────────
 function DeleteConfirmModal({ event, onClose, onConfirm }) {
-  const meta = TYPE_META[event.type];
+  const [saving, setSaving] = useState(false);
+  const meta = TYPE_META[event.type] || TYPE_META["meeting"];
   return (
     <div
       onClick={onClose}
@@ -2800,7 +2810,15 @@ function DeleteConfirmModal({ event, onClose, onConfirm }) {
           </button>
           <button
             className="btn-journal"
-            onClick={onConfirm}
+            onClick={async () => {
+              setSaving(true);
+              try {
+                await onConfirm();
+              } finally {
+                setSaving(false);
+              }
+            }}
+            disabled={saving}
             style={{
               background: "#FDE8E8",
               borderColor: "#B85A5A",
@@ -2808,7 +2826,7 @@ function DeleteConfirmModal({ event, onClose, onConfirm }) {
               boxShadow: "2px 2px 0 #B85A5A",
             }}
           >
-            確定撕下 <NI icon="noto:cross-mark" size={13} />
+            {saving ? "處理中..." : <span>確定撕下 <NI icon="noto:cross-mark" size={13} /></span>}
           </button>
         </div>
       </div>
