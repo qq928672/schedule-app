@@ -21,7 +21,7 @@ if (typeof window !== "undefined") {
 // ALLOWED_EMAIL：只有這個 email 可以登入
 // ─────────────────────────────────────────────────────────────
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || "你的Client-ID.apps.googleusercontent.com";
-const ALLOWED_EMAIL    = import.meta.env.VITE_ALLOWED_EMAIL    || "你的email@gmail.com";
+const ALLOWED_EMAIL = import.meta.env.VITE_ALLOWED_EMAIL || "你的email@gmail.com";
 
 // ─────────────────────────────────────────────────────────────
 // MOCK DATA
@@ -147,15 +147,15 @@ const DEFAULT_TYPE_META = {
 // 從試算表 row 產生 meta 物件（bg 自動衍生 bgSoft/border/tape）
 function buildTypeMeta(rows) {
   const COLOR_PALETTE = [
-  { bg: "#FFE8D6", bgSoft: "#FFF3E4", border: "#E8B896", ink: "#8A4A2B", tape: "#F4B88E" },
-  { bg: "#DDEBF4", bgSoft: "#EDF4FA", border: "#9EC0D8", ink: "#3E5F7D", tape: "#A8C8DF" },
-  { bg: "#FCDDE4", bgSoft: "#FEEDF1", border: "#E8A8B8", ink: "#8A3D52", tape: "#F2B8C6" },
-  { bg: "#E8F5E9", bgSoft: "#F0FAF1", border: "#A5D6A7", ink: "#2E7D32", tape: "#C8E6C9" },
-  { bg: "#EDE7F6", bgSoft: "#F3F0FB", border: "#B39DDB", ink: "#4527A0", tape: "#D1C4E9" },
-  { bg: "#FFF8E1", bgSoft: "#FFFDF0", border: "#FFD54F", ink: "#F57F17", tape: "#FFE082" },
-  { bg: "#E0F7FA", bgSoft: "#F0FDFF", border: "#80DEEA", ink: "#00695C", tape: "#B2EBF2" },
-  { bg: "#FCE4EC", bgSoft: "#FEF0F5", border: "#F48FB1", ink: "#880E4F", tape: "#F8BBD0" },
-];
+    { bg: "#FFE8D6", bgSoft: "#FFF3E4", border: "#E8B896", ink: "#8A4A2B", tape: "#F4B88E" },
+    { bg: "#DDEBF4", bgSoft: "#EDF4FA", border: "#9EC0D8", ink: "#3E5F7D", tape: "#A8C8DF" },
+    { bg: "#FCDDE4", bgSoft: "#FEEDF1", border: "#E8A8B8", ink: "#8A3D52", tape: "#F2B8C6" },
+    { bg: "#E8F5E9", bgSoft: "#F0FAF1", border: "#A5D6A7", ink: "#2E7D32", tape: "#C8E6C9" },
+    { bg: "#EDE7F6", bgSoft: "#F3F0FB", border: "#B39DDB", ink: "#4527A0", tape: "#D1C4E9" },
+    { bg: "#FFF8E1", bgSoft: "#FFFDF0", border: "#FFD54F", ink: "#F57F17", tape: "#FFE082" },
+    { bg: "#E0F7FA", bgSoft: "#F0FDFF", border: "#80DEEA", ink: "#00695C", tape: "#B2EBF2" },
+    { bg: "#FCE4EC", bgSoft: "#FEF0F5", border: "#F48FB1", ink: "#880E4F", tape: "#F8BBD0" },
+  ];
   // lecture/meeting/dinner 保留原本顏色
   // 新類型優先用試算表填的顏色，沒填才用色盤
   const meta = { ...DEFAULT_TYPE_META };
@@ -167,23 +167,23 @@ function buildTypeMeta(rows) {
       // 預設類型：只更新 zh/emoji，顏色不動
       meta[key] = {
         ...DEFAULT_TYPE_META[key],
-        zh:    row.zh    || DEFAULT_TYPE_META[key].zh,
+        zh: row.zh || DEFAULT_TYPE_META[key].zh,
         emoji: row.emoji || DEFAULT_TYPE_META[key].emoji,
       };
     } else {
       // 新類型：優先用試算表顏色，沒填才用色盤
       const fallback = COLOR_PALETTE[paletteIdx % COLOR_PALETTE.length];
       if (!row.bg) paletteIdx++;
-      const bg  = row.bg  || fallback.bg;
+      const bg = row.bg || fallback.bg;
       const ink = row.ink || fallback.ink;
       meta[key] = {
-        zh:    row.zh    || key,
+        zh: row.zh || key,
         emoji: row.emoji || "📌",
         bg,
         bgSoft: fallback.bgSoft || bg,
         border: fallback.border || bg,
         ink,
-        tape:   bg,
+        tape: bg,
       };
     }
   }
@@ -627,7 +627,7 @@ export default function App() {
             正在讀取行程本...
           </div>
           <div style={{ display: "flex", gap: 8 }}>
-            {[0,1,2].map(i => (
+            {[0, 1, 2].map(i => (
               <span key={i} style={{
                 width: 10, height: 10, borderRadius: "50%",
                 background: "var(--accent)",
@@ -1903,8 +1903,8 @@ function StepIndicator({ current }) {
                 background: active
                   ? "var(--pink)"
                   : done
-                  ? "var(--mint)"
-                  : "transparent",
+                    ? "var(--mint)"
+                    : "transparent",
                 border: active ? "1.5px solid var(--ink)" : "1.5px solid transparent",
                 opacity: active || done ? 1 : 0.4,
                 transition: "all 0.3s ease",
@@ -1918,8 +1918,8 @@ function StepIndicator({ current }) {
                   background: active
                     ? "var(--ink)"
                     : done
-                    ? "var(--ink)"
-                    : "var(--line)",
+                      ? "var(--ink)"
+                      : "var(--line)",
                   color: "var(--cream)",
                   fontSize: 11,
                   fontWeight: 700,
@@ -2011,13 +2011,13 @@ function EditableField({
     background: showWarning
       ? "var(--yellow-soft)"
       : focused
-      ? "var(--cream)"
-      : "rgba(255, 255, 255, 0.5)",
+        ? "var(--cream)"
+        : "rgba(255, 255, 255, 0.5)",
     border: showWarning
       ? "1px dashed #D4B44E"
       : focused
-      ? "1.5px solid var(--accent)"
-      : "1px solid var(--line)",
+        ? "1.5px solid var(--accent)"
+        : "1px solid var(--line)",
     borderRadius: 10,
     fontFamily: fontFamily || "var(--body-font)",
     fontSize: fontSize,
@@ -3030,10 +3030,10 @@ function CalendarCell({ date, events, isToday, dayOfWeek, onEventClick, onShowMo
             color: isToday
               ? "var(--accent)"
               : isSun
-              ? "var(--accent)"
-              : isSat
-              ? "#5D8DB5"
-              : "var(--ink)",
+                ? "var(--accent)"
+                : isSat
+                  ? "#5D8DB5"
+                  : "var(--ink)",
             lineHeight: 1,
           }}
         >
