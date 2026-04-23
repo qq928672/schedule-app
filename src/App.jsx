@@ -146,6 +146,16 @@ const DEFAULT_TYPE_META = {
 
 // 從試算表 row 產生 meta 物件（bg 自動衍生 bgSoft/border/tape）
 function buildTypeMeta(rows) {
+  const COLOR_PALETTE = [
+  { bg: "#FFE8D6", bgSoft: "#FFF3E4", border: "#E8B896", ink: "#8A4A2B", tape: "#F4B88E" },
+  { bg: "#DDEBF4", bgSoft: "#EDF4FA", border: "#9EC0D8", ink: "#3E5F7D", tape: "#A8C8DF" },
+  { bg: "#FCDDE4", bgSoft: "#FEEDF1", border: "#E8A8B8", ink: "#8A3D52", tape: "#F2B8C6" },
+  { bg: "#E8F5E9", bgSoft: "#F0FAF1", border: "#A5D6A7", ink: "#2E7D32", tape: "#C8E6C9" },
+  { bg: "#EDE7F6", bgSoft: "#F3F0FB", border: "#B39DDB", ink: "#4527A0", tape: "#D1C4E9" },
+  { bg: "#FFF8E1", bgSoft: "#FFFDF0", border: "#FFD54F", ink: "#F57F17", tape: "#FFE082" },
+  { bg: "#E0F7FA", bgSoft: "#F0FDFF", border: "#80DEEA", ink: "#00695C", tape: "#B2EBF2" },
+  { bg: "#FCE4EC", bgSoft: "#FEF0F5", border: "#F48FB1", ink: "#880E4F", tape: "#F8BBD0" },
+];
   // lecture/meeting/dinner 保留原本顏色
   // 新類型優先用試算表填的顏色，沒填才用色盤
   const meta = { ...DEFAULT_TYPE_META };
