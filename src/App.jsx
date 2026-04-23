@@ -21,7 +21,7 @@ if (typeof window !== "undefined") {
 // ALLOWED_EMAIL：只有這個 email 可以登入
 // ─────────────────────────────────────────────────────────────
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || "你的Client-ID.apps.googleusercontent.com";
-const ALLOWED_EMAIL    = import.meta.env.VITE_ALLOWED_EMAIL    || "你的email@gmail.com";
+const ALLOWED_EMAIL = import.meta.env.VITE_ALLOWED_EMAIL || "你的email@gmail.com";
 
 // ─────────────────────────────────────────────────────────────
 // MOCK DATA
@@ -169,7 +169,7 @@ function buildTypeMeta(rows) {
       // 已有預設顏色的類型：只更新 zh/emoji，保留顏色
       meta[key] = {
         ...DEFAULT_TYPE_META[key],
-        zh:    row.zh    || DEFAULT_TYPE_META[key].zh,
+        zh: row.zh || DEFAULT_TYPE_META[key].zh,
         emoji: row.emoji || DEFAULT_TYPE_META[key].emoji,
       };
     } else {
@@ -177,7 +177,7 @@ function buildTypeMeta(rows) {
       const color = COLOR_PALETTE[paletteIdx % COLOR_PALETTE.length];
       paletteIdx++;
       meta[key] = {
-        zh:    row.zh    || key,
+        zh: row.zh || key,
         emoji: row.emoji || "📌",
         ...color,
       };
@@ -632,7 +632,7 @@ export default function App() {
             正在讀取行程本...
           </div>
           <div style={{ display: "flex", gap: 8 }}>
-            {[0,1,2].map(i => (
+            {[0, 1, 2].map(i => (
               <span key={i} style={{
                 width: 10, height: 10, borderRadius: "50%",
                 background: "var(--accent)",
@@ -1465,6 +1465,7 @@ function InputStage({ value, onChange, onClose, onSubmit, error }) {
       <textarea
         value={value}
         onChange={(e) => onChange(e.target.value)}
+        maxLength={800}
         placeholder="例如：下週三晚上七點跟阿翔在大直 Orchid 吃晚餐慶生，記得買禮物..."
         style={{
           width: "100%",
@@ -1501,7 +1502,7 @@ function InputStage({ value, onChange, onClose, onSubmit, error }) {
             color: "var(--ink-mute)",
           }}
         >
-          {value.length} 字 ・ AI 幫你整理
+          {value.length} / 800 字 ・ AI 幫你整理
         </span>
         <div style={{ display: "flex", gap: 10 }}>
           <button className="btn-journal" onClick={onClose}>
@@ -1967,8 +1968,8 @@ function StepIndicator({ current }) {
                 background: active
                   ? "var(--pink)"
                   : done
-                  ? "var(--mint)"
-                  : "transparent",
+                    ? "var(--mint)"
+                    : "transparent",
                 border: active ? "1.5px solid var(--ink)" : "1.5px solid transparent",
                 opacity: active || done ? 1 : 0.4,
                 transition: "all 0.3s ease",
@@ -1982,8 +1983,8 @@ function StepIndicator({ current }) {
                   background: active
                     ? "var(--ink)"
                     : done
-                    ? "var(--ink)"
-                    : "var(--line)",
+                      ? "var(--ink)"
+                      : "var(--line)",
                   color: "var(--cream)",
                   fontSize: 11,
                   fontWeight: 700,
@@ -2075,13 +2076,13 @@ function EditableField({
     background: showWarning
       ? "var(--yellow-soft)"
       : focused
-      ? "var(--cream)"
-      : "rgba(255, 255, 255, 0.5)",
+        ? "var(--cream)"
+        : "rgba(255, 255, 255, 0.5)",
     border: showWarning
       ? "1px dashed #D4B44E"
       : focused
-      ? "1.5px solid var(--accent)"
-      : "1px solid var(--line)",
+        ? "1.5px solid var(--accent)"
+        : "1px solid var(--line)",
     borderRadius: 10,
     fontFamily: fontFamily || "var(--body-font)",
     fontSize: fontSize,
@@ -3103,10 +3104,10 @@ function CalendarCell({ date, events, isToday, dayOfWeek, onEventClick, onShowMo
             color: isToday
               ? "var(--accent)"
               : isSun
-              ? "var(--accent)"
-              : isSat
-              ? "#5D8DB5"
-              : "var(--ink)",
+                ? "var(--accent)"
+                : isSat
+                  ? "#5D8DB5"
+                  : "var(--ink)",
             lineHeight: 1,
           }}
         >
