@@ -21,7 +21,7 @@ if (typeof window !== "undefined") {
 // ALLOWED_EMAIL：只有這個 email 可以登入
 // ─────────────────────────────────────────────────────────────
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || "你的Client-ID.apps.googleusercontent.com";
-const ALLOWED_EMAIL = import.meta.env.VITE_ALLOWED_EMAIL || "你的email@gmail.com";
+const ALLOWED_EMAIL    = import.meta.env.VITE_ALLOWED_EMAIL    || "你的email@gmail.com";
 
 // ─────────────────────────────────────────────────────────────
 // MOCK DATA
@@ -145,50 +145,47 @@ const DEFAULT_TYPE_META = {
 };
 
 // 從試算表 row 產生 meta 物件（bg 自動衍生 bgSoft/border/tape）
+// 預設色盤 — 每個新類型自動輪流套用
+const COLOR_PALETTE = [
+  { bg: "#FFE8D6", bgSoft: "#FFF3E4", border: "#E8B896", ink: "#8A4A2B", tape: "#F4B88E" },
+  { bg: "#DDEBF4", bgSoft: "#EDF4FA", border: "#9EC0D8", ink: "#3E5F7D", tape: "#A8C8DF" },
+  { bg: "#FCDDE4", bgSoft: "#FEEDF1", border: "#E8A8B8", ink: "#8A3D52", tape: "#F2B8C6" },
+  { bg: "#E8F5E9", bgSoft: "#F0FAF1", border: "#A5D6A7", ink: "#2E7D32", tape: "#C8E6C9" },
+  { bg: "#EDE7F6", bgSoft: "#F3F0FB", border: "#B39DDB", ink: "#4527A0", tape: "#D1C4E9" },
+  { bg: "#FFF8E1", bgSoft: "#FFFDF0", border: "#FFD54F", ink: "#F57F17", tape: "#FFE082" },
+  { bg: "#E0F7FA", bgSoft: "#F0FDFF", border: "#80DEEA", ink: "#00695C", tape: "#B2EBF2" },
+  { bg: "#FCE4EC", bgSoft: "#FEF0F5", border: "#F48FB1", ink: "#880E4F", tape: "#F8BBD0" },
+];
+
 function buildTypeMeta(rows) {
-  const COLOR_PALETTE = [
-    { bg: "#FFE8D6", bgSoft: "#FFF3E4", border: "#E8B896", ink: "#8A4A2B", tape: "#F4B88E" },
-    { bg: "#DDEBF4", bgSoft: "#EDF4FA", border: "#9EC0D8", ink: "#3E5F7D", tape: "#A8C8DF" },
-    { bg: "#FCDDE4", bgSoft: "#FEEDF1", border: "#E8A8B8", ink: "#8A3D52", tape: "#F2B8C6" },
-    { bg: "#E8F5E9", bgSoft: "#F0FAF1", border: "#A5D6A7", ink: "#2E7D32", tape: "#C8E6C9" },
-    { bg: "#EDE7F6", bgSoft: "#F3F0FB", border: "#B39DDB", ink: "#4527A0", tape: "#D1C4E9" },
-    { bg: "#FFF8E1", bgSoft: "#FFFDF0", border: "#FFD54F", ink: "#F57F17", tape: "#FFE082" },
-    { bg: "#E0F7FA", bgSoft: "#F0FDFF", border: "#80DEEA", ink: "#00695C", tape: "#B2EBF2" },
-    { bg: "#FCE4EC", bgSoft: "#FEF0F5", border: "#F48FB1", ink: "#880E4F", tape: "#F8BBD0" },
-  ];
-  // lecture/meeting/dinner 保留原本顏色
-  // 新類型優先用試算表填的顏色，沒填才用色盤
+  // lecture/meeting/dinner 永遠保留原本顏色
+  // 新增的類型從色盤分配顏色（跳過已用的色盤索引）
   const meta = { ...DEFAULT_TYPE_META };
-  let paletteIdx = 3;
-  for (const row of rows) {
+  let paletteIdx = 0;
+  rows.forEach((row) => {
     const key = row.key;
-    if (!key) continue;
+    if (!key) return;
     if (DEFAULT_TYPE_META[key]) {
-      // 預設類型：只更新 zh/emoji，顏色不動
+      // 已有預設顏色的類型：只更新 zh/emoji，保留顏色
       meta[key] = {
         ...DEFAULT_TYPE_META[key],
-        zh: row.zh || DEFAULT_TYPE_META[key].zh,
+        zh:    row.zh    || DEFAULT_TYPE_META[key].zh,
         emoji: row.emoji || DEFAULT_TYPE_META[key].emoji,
       };
     } else {
-      // 新類型：優先用試算表顏色，沒填才用色盤
-      const fallback = COLOR_PALETTE[paletteIdx % COLOR_PALETTE.length];
-      if (!row.bg) paletteIdx++;
-      const bg = row.bg || fallback.bg;
-      const ink = row.ink || fallback.ink;
+      // 全新類型：從色盤分配顏色
+      const color = COLOR_PALETTE[paletteIdx % COLOR_PALETTE.length];
+      paletteIdx++;
       meta[key] = {
-        zh: row.zh || key,
+        zh:    row.zh    || key,
         emoji: row.emoji || "📌",
-        bg,
-        bgSoft: fallback.bgSoft || bg,
-        border: fallback.border || bg,
-        ink,
-        tape: bg,
+        ...color,
       };
     }
-  }
+  });
   return meta;
 }
+
 // 全域 TYPE_META（由 App 啟動後更新）
 let TYPE_META = { ...DEFAULT_TYPE_META };
 
@@ -228,6 +225,12 @@ const tiltFor = (id) => {
 };
 
 
+
+// 空白行程模板（手動新增用）
+const EMPTY_EVENT = {
+  title: "", type: "meeting", date: "", start: "", end: "",
+  location: "", with: "", note: "",
+};
 // ═════════════════════════════════════════════════════════════
 // GOOGLE SHEETS API (via Google Apps Script)
 // ═════════════════════════════════════════════════════════════
@@ -307,6 +310,7 @@ function NI({ icon, size = 18, style: extraStyle = {} }) {
 export default function App() {
   const [view, setView] = useState("schedule");
   const [pasteOpen, setPasteOpen] = useState(false);
+  const [manualOpen, setManualOpen] = useState(false);
   const [editingEvent, setEditingEvent] = useState(null);
   const [search, setSearch] = useState("");
   const [filterType, setFilterType] = useState("all"); // all | lecture | meeting | dinner
@@ -627,7 +631,7 @@ export default function App() {
             正在讀取行程本...
           </div>
           <div style={{ display: "flex", gap: 8 }}>
-            {[0, 1, 2].map(i => (
+            {[0,1,2].map(i => (
               <span key={i} style={{
                 width: 10, height: 10, borderRadius: "50%",
                 background: "var(--accent)",
@@ -666,6 +670,7 @@ export default function App() {
           view={view}
           setView={setView}
           onPaste={() => setPasteOpen(true)}
+          onManual={() => setManualOpen(true)}
           eventCount={filteredEvents.length}
           user={user}
           onSignOut={handleSignOut}
@@ -696,6 +701,13 @@ export default function App() {
       {pasteOpen && (
         <AIPasteFlow
           onClose={() => setPasteOpen(false)}
+          onConfirm={handleAddEvent}
+        />
+      )}
+
+      {manualOpen && (
+        <ManualAddModal
+          onClose={() => setManualOpen(false)}
           onConfirm={handleAddEvent}
         />
       )}
@@ -830,7 +842,7 @@ function LoginPage({ authError }) {
             lineHeight: 1.2,
           }}
         >
-          時光記事
+          今天的行程記事本
         </h1>
 
         <p
@@ -933,7 +945,7 @@ function DecorationDoodles() {
 }
 
 // ─────────────────────────────────────────────────────────────
-function Header({ view, setView, onPaste, eventCount, user, onSignOut, search, setSearch, filterType, setFilterType, typeMeta }) {
+function Header({ view, setView, onPaste, onManual, eventCount, user, onSignOut, search, setSearch, filterType, setFilterType, typeMeta }) {
   const today = new Date();
   const dateLine = `${today.getFullYear()}年 ${today.getMonth() + 1}月 ${today.getDate()}日`;
   const weekday = WEEKDAY_SHORT[today.getDay()];
@@ -996,7 +1008,7 @@ function Header({ view, setView, onPaste, eventCount, user, onSignOut, search, s
             color: "var(--ink)",
           }}
         >
-          <span className="wavy-underline">時光</span>記事
+          <span className="wavy-underline">今天的</span>行程記事本
           <span
             style={{
               display: "inline-block",
@@ -1029,9 +1041,14 @@ function Header({ view, setView, onPaste, eventCount, user, onSignOut, search, s
               </button>
             </div>
           )}
-          <button className="btn-journal btn-pink" onClick={onPaste}>
-            ＋ AI 新增行程
-          </button>
+          <div style={{ display: "flex", gap: 8 }}>
+            <button className="btn-journal" onClick={onManual}>
+              ✎ 手動新增
+            </button>
+            <button className="btn-journal btn-pink" onClick={onPaste}>
+              ＋ AI 新增行程
+            </button>
+          </div>
         </div>
       </div>
 
@@ -1253,6 +1270,42 @@ function ViewTab({ active, onClick, color, icon, label, sub }) {
 // stage 2: loading（AI 解析中）
 // stage 3: preview（預覽並編輯）
 // ═════════════════════════════════════════════════════════════
+
+// ─────────────────────────────────────────────────────────────
+// MANUAL ADD MODAL — 手動填寫行程（不需要 AI）
+// ─────────────────────────────────────────────────────────────
+function ManualAddModal({ onClose, onConfirm }) {
+  return (
+    <div
+      onClick={onClose}
+      style={{
+        position: "fixed",
+        inset: 0,
+        background: "rgba(74, 63, 54, 0.45)",
+        backdropFilter: "blur(4px)",
+        zIndex: 100,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        padding: 24,
+        animation: "softFade 0.25s ease",
+        overflow: "auto",
+      }}
+    >
+      <div onClick={(e) => e.stopPropagation()} style={{ width: "100%", maxWidth: 640 }}>
+        <PreviewStage
+          initial={EMPTY_EVENT}
+          onBack={null}
+          onCancel={onClose}
+          onConfirm={onConfirm}
+          mode="create"
+          isManual={true}
+        />
+      </div>
+    </div>
+  );
+}
+
 function AIPasteFlow({ onClose, onConfirm }) {
   const [stage, setStage] = useState("input"); // input | loading | preview
   const [rawText, setRawText] = useState("");
@@ -1547,8 +1600,7 @@ function LoadingStage() {
 // ─────────────────────────────────────────────────────────────
 // Stage 3: PREVIEW — 可編輯預覽（同時用於編輯現有事件）
 // ─────────────────────────────────────────────────────────────
-function PreviewStage({ initial, onBack, onCancel, onConfirm, onDelete, mode = "create" }) {
-  const [saving, setSaving] = useState(false);
+function PreviewStage({ initial, onBack, onCancel, onConfirm, onDelete, mode = "create", isManual = false }) {
   const [draft, setDraft] = useState(initial);
 
   const update = (key, value) => setDraft({ ...draft, [key]: value });
@@ -1847,6 +1899,8 @@ function PreviewStage({ initial, onBack, onCancel, onConfirm, onDelete, mode = "
           >
             <NI icon="noto:wastebasket" size={18} /> 刪除這個
           </button>
+        ) : isManual ? (
+          <div />
         ) : (
           <button className="btn-journal" onClick={onBack}>
             ← 重新貼文字
@@ -1860,14 +1914,10 @@ function PreviewStage({ initial, onBack, onCancel, onConfirm, onDelete, mode = "
           </button>
           <button
             className="btn-journal btn-pink"
-            onClick={async () => {
-              setSaving(true);
-              await onConfirm(draft);
-              setSaving(false);
-            }}
-            disabled={!canConfirm || saving}
+            onClick={() => onConfirm(draft)}
+            disabled={!canConfirm}
           >
-            {saving ? "處理中..." : isEdit ? "儲存變更 ✨" : "加入行程本 ✨"}
+            {isEdit ? "儲存變更 ✨" : "加入行程本 ✨"}
           </button>
         </div>
       </div>
@@ -1908,8 +1958,8 @@ function StepIndicator({ current }) {
                 background: active
                   ? "var(--pink)"
                   : done
-                    ? "var(--mint)"
-                    : "transparent",
+                  ? "var(--mint)"
+                  : "transparent",
                 border: active ? "1.5px solid var(--ink)" : "1.5px solid transparent",
                 opacity: active || done ? 1 : 0.4,
                 transition: "all 0.3s ease",
@@ -1923,8 +1973,8 @@ function StepIndicator({ current }) {
                   background: active
                     ? "var(--ink)"
                     : done
-                      ? "var(--ink)"
-                      : "var(--line)",
+                    ? "var(--ink)"
+                    : "var(--line)",
                   color: "var(--cream)",
                   fontSize: 11,
                   fontWeight: 700,
@@ -2016,13 +2066,13 @@ function EditableField({
     background: showWarning
       ? "var(--yellow-soft)"
       : focused
-        ? "var(--cream)"
-        : "rgba(255, 255, 255, 0.5)",
+      ? "var(--cream)"
+      : "rgba(255, 255, 255, 0.5)",
     border: showWarning
       ? "1px dashed #D4B44E"
       : focused
-        ? "1.5px solid var(--accent)"
-        : "1px solid var(--line)",
+      ? "1.5px solid var(--accent)"
+      : "1px solid var(--line)",
     borderRadius: 10,
     fontFamily: fontFamily || "var(--body-font)",
     fontSize: fontSize,
@@ -2336,7 +2386,7 @@ function DaySection({ date, items, index, onEdit, onDelete }) {
 }
 
 function EventSticker({ event, index, onEdit, onDelete }) {
-  const meta = TYPE_META[event.type] || TYPE_META["meeting"];
+  const meta = TYPE_META[event.type];
   const tilt = tiltFor(event.id);
   const [hover, setHover] = useState(false);
 
@@ -2615,8 +2665,7 @@ function EditEventModal({ event, onClose, onConfirm, onDelete }) {
 // DeleteConfirmModal — 刪除前確認
 // ─────────────────────────────────────────────────────────────
 function DeleteConfirmModal({ event, onClose, onConfirm }) {
-  const [saving, setSaving] = useState(false);
-  const meta = TYPE_META[event.type] || TYPE_META["meeting"];
+  const meta = TYPE_META[event.type];
   return (
     <div
       onClick={onClose}
@@ -2751,11 +2800,7 @@ function DeleteConfirmModal({ event, onClose, onConfirm }) {
           </button>
           <button
             className="btn-journal"
-            onClick={async () => {
-              setSaving(true);
-              await onConfirm();
-            }}
-            disabled={saving}
+            onClick={onConfirm}
             style={{
               background: "#FDE8E8",
               borderColor: "#B85A5A",
@@ -2763,7 +2808,7 @@ function DeleteConfirmModal({ event, onClose, onConfirm }) {
               boxShadow: "2px 2px 0 #B85A5A",
             }}
           >
-            {saving ? "處理中..." : <span>確定撕下 <NI icon="noto:cross-mark" size={13} /></span>}
+            確定撕下 <NI icon="noto:cross-mark" size={13} />
           </button>
         </div>
       </div>
@@ -3040,10 +3085,10 @@ function CalendarCell({ date, events, isToday, dayOfWeek, onEventClick, onShowMo
             color: isToday
               ? "var(--accent)"
               : isSun
-                ? "var(--accent)"
-                : isSat
-                  ? "#5D8DB5"
-                  : "var(--ink)",
+              ? "var(--accent)"
+              : isSat
+              ? "#5D8DB5"
+              : "var(--ink)",
             lineHeight: 1,
           }}
         >
@@ -3164,7 +3209,7 @@ function CalendarCell({ date, events, isToday, dayOfWeek, onEventClick, onShowMo
 // EventDetailModal — 點日曆事件後開啟的詳細卡片
 // ─────────────────────────────────────────────────────────────
 function EventDetailModal({ event, onClose, onEdit, onDelete }) {
-  const meta = TYPE_META[event.type] || TYPE_META["meeting"];
+  const meta = TYPE_META[event.type];
   const d = event.date ? parseYMD(event.date) : null;
   const weekday = d ? WEEKDAY_SHORT[d.getDay()] : "—";
   const mm = d ? MONTH_LABELS[d.getMonth()] : null;
