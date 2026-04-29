@@ -352,6 +352,8 @@ export default function App() {
               )
             );
             if (!ALLOWED_EMAILS.includes(payload.email)) {
+              console.log("登入 email:", payload.email);
+              console.log("允許清單:", ALLOWED_EMAILS);
               setAuthError("此帳號（" + payload.email + "）沒有存取權限");
               return;
             }
