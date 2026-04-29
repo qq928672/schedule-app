@@ -21,8 +21,7 @@ if (typeof window !== "undefined") {
 // ALLOWED_EMAIL：只有這個 email 可以登入
 // ─────────────────────────────────────────────────────────────
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || "你的Client-ID.apps.googleusercontent.com";
-const ALLOWED_EMAIL = import.meta.env.VITE_ALLOWED_EMAIL || "你的email@gmail.com";
-
+const ALLOWED_EMAILS = (import.meta.env.VITE_ALLOWED_EMAILS || "").split(",").map(e => e.trim());
 // ─────────────────────────────────────────────────────────────
 // MOCK DATA
 // ─────────────────────────────────────────────────────────────
@@ -352,7 +351,7 @@ export default function App() {
                 ).join("")
               )
             );
-            if (payload.email !== ALLOWED_EMAIL) {
+            if (!ALLOWED_EMAILS.includes(payload.email)) {
               setAuthError("此帳號（" + payload.email + "）沒有存取權限");
               return;
             }
