@@ -333,9 +333,12 @@ export default function App() {
   // ── 初始化 Google One Tap ──────────────────────────────────
   useEffect(() => {
     if (user) return; // 已登入就不需要初始化
+    let initialized = false;
     const timer = setInterval(() => {
       if (!window.google) return;
       clearInterval(timer);
+      if (initialized) return;
+      initialized = true;
       window.google.accounts.id.initialize({
         client_id: GOOGLE_CLIENT_ID,
         callback: (response) => {
