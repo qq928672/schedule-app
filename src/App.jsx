@@ -252,18 +252,16 @@ async function gasRequest(payload) {
 }
 
 // 讀取全部行程
-async function sheetsGetAll() {
-  const data = await gasRequest({ action: "getAll" });
+async function sheetsGetAll(email) {
+  const data = await gasRequest({ action: "getAll", email });
   return (data.events || [])
-    .filter(ev => ev.title) // 過濾掉完全空白的列
+    .filter(ev => ev.title)
     .map(ev => ({
       ...ev,
       id: ev.id || String(Date.now()),
-      // date 空白時補今天，避免後續 parseYMD 炸掉
-      date: ev.date || new Date().toISOString().slice(0, 10),
+      date: (ev.date || "").toString().trim().slice(0, 10) || new Date().toISOString().slice(0, 10),
     }));
 }
-
 // 新增行程
 async function sheetsAdd(event) {
   const data = await gasRequest({ action: "add", event });
@@ -387,9 +385,11 @@ export default function App() {
   // ── 初始載入：同時讀取行程 + 類型設定 ────────────────────────
   useEffect(() => {
     if (!user) return;
+    setEvents([]);
+    setLoading(true);
     Promise.all([
-      sheetsGetAll(),
-      gasRequest({ action: "getTypes" }).then(d => d.types || []).catch(() => []),
+      sheetsGetAll(user.email),
+      gasRequest({ action: "getTypes", email: user.email }).then(d => d.types || []).catch(() => []),
     ])
       .then(([evData, typeRows]) => {
         setEvents(evData);
