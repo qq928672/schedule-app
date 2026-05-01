@@ -362,7 +362,6 @@ export default function App() {
             }
             const userInfo = { name: payload.name, email: payload.email, picture: payload.picture };
             sessionStorage.setItem("schedule_user", JSON.stringify(userInfo));
-            CURRENT_USER_EMAIL = payload.email;
             setUser(userInfo);
             setAuthError(null);
           } catch (e) {
