@@ -234,6 +234,8 @@ const EMPTY_EVENT = {
 // GOOGLE SHEETS API (via Google Apps Script)
 // ═════════════════════════════════════════════════════════════
 const GAS_URL = import.meta.env.VITE_GAS_URL;
+let CURRENT_USER_EMAIL = "";
+
 
 async function gasRequest(payload) {
   if (!GAS_URL) throw new Error("請在 .env 設定 VITE_GAS_URL");
@@ -243,7 +245,7 @@ async function gasRequest(payload) {
   const res = await fetch(url.toString(), {
     method: "POST",
     headers: { "Content-Type": "text/plain;charset=utf-8" },
-    body: JSON.stringify(payload),
+    body: JSON.stringify({ ...payload, origin: window.location.origin, email: CURRENT_USER_EMAIL }),
   });
   if (!res.ok) throw new Error("GAS 請求失敗：" + res.status);
   const data = await res.json();
@@ -359,6 +361,7 @@ export default function App() {
             }
             const userInfo = { name: payload.name, email: payload.email, picture: payload.picture };
             sessionStorage.setItem("schedule_user", JSON.stringify(userInfo));
+            CURRENT_USER_EMAIL = payload.email;
             setUser(userInfo);
             setAuthError(null);
           } catch (e) {
