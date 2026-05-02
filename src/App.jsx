@@ -105,7 +105,7 @@ const MOCK_EVENTS = [
   },
   {
     id: 8,
-    title: "與 Linda 簡報",
+    title: "與 Linda",
     type: "meeting",
     date: "2026-05-12",
     start: "14:00",
@@ -251,7 +251,7 @@ async function gasRequest(payload) {
   return data;
 }
 
-// 讀取全部行程
+// 讀取全部行程 
 async function sheetsGetAll(email) {
   const data = await gasRequest({ action: "getAll", email });
   return (data.events || [])
